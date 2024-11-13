@@ -15,6 +15,6 @@ export const SideBannerSection = styled.section`
 
 export const LogoSubTitle = styled.section`
   margin-top: 10px;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   color: ${(props) => props.theme.colors.white100};
 `;

@@ -13,7 +13,7 @@ export const theme: DefaultTheme = {
     // Colors
     primary100: "#181818",
     primary60: "#1f1f1f",
-    primary50: "#4B45E780",
+    primary50: "#2b2b2b",
     primary38: "#4B45E761",
     primary10: "#4B45E719",
     primary6: "#4B45E70f",
