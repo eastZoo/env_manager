@@ -23,7 +23,7 @@ const routerItems: RouterItem[] = [
 ];
 
 export function Routes() {
-  const accessToken = readAccessToken();
+  const accessToken = "readAccessToken()";
 
   return (
     <DomReoutes>

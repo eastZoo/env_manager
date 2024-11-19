@@ -32,7 +32,7 @@ export const ContentSection = styled.section`
 
 export const MainFooter = styled.footer`
   width: 100%;
-  max-width: 560px;
+  max-width: 650px;
   margin: 0 auto;
   background-color: #fff;
   border-top: 1px solid ${(props) => props.theme.colors.primary50};

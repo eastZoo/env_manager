@@ -19,6 +19,7 @@ export const theme: DefaultTheme = {
     primary: "#FAC94A",
     primary100: "#181818",
     primary60: "#1f1f1f",
+    primary50: "#2B2B2B",
     primaryActive: "#FFBC14FF",
     secondary: "#00DEAB",
     secondaryActive: "#00BA9E",
