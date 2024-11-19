@@ -1,13 +1,13 @@
 import styled, { css } from "styled-components";
 import IconEditModify from "../../../styles/assets/svg/icon_edit_modify.svg";
 
-interface MainBoxProps {
+interface AuthBoxProps {
   $asideOpen?: boolean;
 }
 
-export const MainTemplate = styled.div<MainBoxProps>`
+export const AuthTemplate = styled.div<AuthBoxProps>`
   display: flex;
-  max-width: 1160px;
+  max-width: 1320px;
   margin: 0 auto;
   min-height: 100vh;
   background-color: ${(props) => props.theme.colors.primary100};
@@ -16,7 +16,7 @@ export const MainTemplate = styled.div<MainBoxProps>`
 export const ContentSection = styled.section`
   width: 100%;
   min-width: 320px;
-  max-width: 560px;
+  max-width: 650px;
   min-height: 100vh;
   margin-left: auto;
   margin-right: 0;
@@ -30,7 +30,7 @@ export const ContentSection = styled.section`
   }
 `;
 
-export const MainFooter = styled.footer`
+export const AuthFooter = styled.footer`
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
@@ -41,7 +41,7 @@ export const MainFooter = styled.footer`
   z-index: 101;
 `;
 
-export const MainFooterInner = styled.div`
+export const AuthFooterInner = styled.div`
   height: 100%;
   display: flex;
   justify-content: space-between;

@@ -1,66 +1,71 @@
 import { DefaultTheme } from "styled-components";
 
 export const theme: DefaultTheme = {
-  shadows: {
-    popup: "0px 2px 10px 0px rgba(0,0,0,0.1)",
-    modal: "0px 8px 24px 0px rgba(0,0,0,.14)",
-    field: "0px 6px 16px 0px rgba(0,0,0,.06)",
-    item: "0px 5px 10px 0px rgba(75,69,231, .12)",
-    card: "0px 12px 12px 0px #4B45E74C",
+  gradient: {
+    skeleton:
+      "linear-gradient(120deg, #e5e5e5 30%, #f0f0f0 38%, #f0f0f0 40%, #e5e5e5 48%)",
+    gradientGauge:
+      "linear-gradient(90deg, #54DC9D 0%, #FFCD2E 36.98%, #FF9726 63.02%, #EE2A59 100%)",
   },
-
+  shadow: {
+    primary: "0 2px 6px -3px rgba(0,0,0,0.1)",
+    box: "0 -2px 20px -4px rgba(0,0,0,0.1)",
+    navigation: "0px 10px 2px -2px rgba(0,0,0, 0.2)",
+    btn: "0 2px 2px 1px rgba(0,0,0,0.1)",
+    modal: "0 2px 6px -3px rgba(0,0,0,0.3)",
+  },
   colors: {
-    // Colors
+    // PALETTE
+    primary: "#FAC94A",
     primary100: "#181818",
     primary60: "#1f1f1f",
-    primary50: "#2b2b2b",
-    primary38: "#4B45E761",
-    primary10: "#4B45E719",
-    primary6: "#4B45E70f",
-    primary5: "#4B45E70d",
-    primaryHover: "#3C36D4",
-    secondary100: "#3832EA",
+    primaryActive: "#FFBC14FF",
+    secondary: "#00DEAB",
+    secondaryActive: "#00BA9E",
+    highlight: "#8F8DF0",
+    highlightActive: "rgba(143, 141, 240, 0.2)",
 
-    // Basic
-    white100: "#ffffff",
-    white80: "#ffffffcc",
-    white60: "#ffffff99",
-    white38: "#ffffff61",
-    white12: "#ffffff1f",
-    black100: "#000000",
-    black90: "#000000e6",
-    black80: "#000000cc",
-    black70: "#000000b3",
-    black60: "#00000099",
-    black38: "#00000061",
-    black30: "#0000004C",
-    black12: "#0000001f",
-    black10: "#00000019",
-    black8: "#00000014",
-    black5: "#0000000d",
-    black4: "#00000004",
-    black2: "#00000005",
-    gray100: "#E6E6E6",
+    white: "#ffffff",
+    whiteActive: "#F6F8FD",
+    black: "#000000",
+    gray: "#676767",
+    lightGray: "#f0f0f0",
+    camerFont: "#C6C6C6",
+    checkBox: "#A8A8A8",
+    disabledBtn: "#E8E8E8",
+    red: "#D71D5D",
 
-    // Status
-    greenStatus: "#00C572",
-    greenStatus8: "#00C57214",
-    greenStatusHover: "#09B06A",
-    yellowStatus: "#FFBC11",
-    redStatus: "#FF4D58",
-    redStatus5: "#FF4D580d",
-    redStatus8: "#FF4D5814",
-    redStatusHover: "#EB404A",
-    blueStatus: "#0098FF",
-    grayStatus: "#00000061",
+    // TEXT
+    labelTxt: "#6B6B6B",
+    contentLabelTxt: "#878787",
+    contentTxt: "#1F1F1F",
+    placeholderTxt: "#ABABAB",
 
-    // Component
-    flowLabelBox: "#666666",
-    labelBox: "#4B4B4B",
-    scrollTrack: "#1A1A1A",
-    authBackground: "#0011664C",
-    shipMonitorBackgroud: "#46C6FF",
-    shipMonitorShade: "#26BCFF",
-    shipMonitorBorder: "#05B2FF",
+    // BORDER
+    linkBtnBorder: "#F2F3FC",
+    divideBorder: "#EDEEF3",
+    itemExpborder: "#F2F3FC",
+
+    // BACKGROUND
+    mainBg: "#FAFAFA",
+    tagBg: "#3C3C3C",
+    whiteBg: "#FFFFFF",
+    handleBg: "#EEEEEE",
+    skeleton: "#e5e5e5",
+    checkBoxBg: "#165EF310",
+    cameraBg: "#F0F0F0",
+    homeStepBg: "#00BAAF",
+
+    // LAYOUT
+
+    // INPUT
+    inputBg: "#1f1f1f",
+    inputBorder: "#D9D9D9",
+    inputActiveBorder: "#1D4ED7",
+    inputDisabledBg: "#DFDFDF",
+    checkBoxBorder: "#E0E0E0",
+
+    //GRID
+    grid: "#364964",
   },
 };

@@ -1,12 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import SideBanner from "../../organisms/SideBanner";
-import * as S from "./MainTemplate.style";
+import * as S from "./MainTemplateContainer.style";
 
 interface MainTemplateProps {
   children: React.ReactElement;
 }
 
-export const MainTemplate = ({ children }: MainTemplateProps) => {
+export const MainTemplate = () => {
   return (
     <S.MainTemplate>
       {/* 왼쪽 사이드 배너 컴포넌트  */}
@@ -14,7 +14,7 @@ export const MainTemplate = ({ children }: MainTemplateProps) => {
       {/* 라우트에 따른 메인 컴포넌트 */}
       <S.ContentSection>
         <header>헤더입니다.</header>
-        {children}
+        <Outlet />
         <S.MainFooter>
           <S.MainFooterInner>
             <Link to="/support"></Link>

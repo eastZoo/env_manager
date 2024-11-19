@@ -3,8 +3,11 @@ import { readAccessToken } from "../common/functions/authFunctions";
 
 // import PrivateRoute from "./PrivateRoute";
 import SupportPage from "../pages/support/SupportPage";
-import MainPage from "../pages/MainPage";
-import { MainTemplatePage } from "../pages/MainTemplatePage";
+import MainPage from "../pages/main/MainPage";
+
+import LoginPage from "../pages/auth/login/LoginPage";
+import { MainTemplate } from "../components/templates/MainTemplate";
+import { AuthTemplate } from "../components/templates/AuthTemplate";
 
 interface RouterItem {
   path: string;
@@ -24,39 +27,25 @@ export function Routes() {
 
   return (
     <DomReoutes>
-      {/* <Route element={<MainPage />}>
-        {routerItems
-          .filter((route) => route.withAuthorization)
-          .map((route: RouterItem) => {
-            return (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={
-                  <PrivateRoute
-                    component={route.element}
-                    authenticated={accessToken}
-                  />
-                }
-              />
-            );
-          })}
-      </Route> */}
-
-      {/* 일단 권한 체크 없이 라우팅 */}
-      <Route element={<MainTemplatePage />}>
-        {routerItems
-          .filter((route) => !route.withAuthorization)
-          .map((route: RouterItem) => {
-            return (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={route.element}
-              />
-            );
-          })}
-      </Route>
+      {accessToken ? (
+        <Route element={<MainTemplate />}>
+          {routerItems
+            .filter((route) => !route.withAuthorization)
+            .map((route: RouterItem) => {
+              return (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={route.element}
+                />
+              );
+            })}
+        </Route>
+      ) : (
+        <Route element={<AuthTemplate />}>
+          <Route key={"/login"} path={"/"} element={<LoginPage />} />
+        </Route>
+      )}
     </DomReoutes>
   );
 }
