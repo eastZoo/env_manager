@@ -1,68 +1,104 @@
 import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FaFolder, FaFolderOpen, FaFile } from "react-icons/fa";
 import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
 import * as S from "./mainpage.style";
+import { request } from "../../lib/api";
 
 interface File {
   id: number;
   name: string;
-  type: "frontend" | "backend";
-  env: Record<string, string>; // 환경 변수
+  type: string;
+  env: Record<string, string>;
 }
 
 interface Folder {
   id: number;
   name: string;
-  isOpen: boolean; // 폴더 열림/닫힘 상태
+  isOpen: boolean;
+  subFolders: Folder[];
   files: File[];
-  subFolders: Folder[]; // 하위 폴더
 }
 
 const MainPage: React.FC = () => {
   const [rootFolders, setRootFolders] = useState<Folder[]>([]);
-  const [nextFolderId, setNextFolderId] = useState(1);
-  const [nextFileId, setNextFileId] = useState(1);
   const [isCreatingFolder, setIsCreatingFolder] = useState<number | null>(null);
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
 
-  // 폴더 생성 완료 핸들러
-  const createFolder = (folderName: string, parentFolderId: number | null) => {
-    if (!folderName.trim()) {
+  const queryClient = useQueryClient();
+
+  // Fetch all root folders
+  const { data: rootFoldersData, isLoading } = useQuery({
+    queryKey: ["folders"],
+    queryFn: async () => {
+      const result = await request<Folder[]>({
+        method: "GET",
+        url: "/folders",
+      });
+      setRootFolders(result); // 로컬 스테이트에 데이터 저장
+      return result;
+    },
+  });
+
+  // Create folder mutation
+  const { mutateAsync: createFolderMutation } = useMutation({
+    mutationFn: ({
+      name,
+      parentFolderId,
+    }: {
+      name: string;
+      parentFolderId?: number;
+    }) => {
+      return request({
+        method: "POST",
+        url: "/folders",
+        data: { name, parentFolderId },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
       setIsCreatingFolder(null);
-      return;
-    }
+    },
+    onError: (error) => {
+      console.error("Folder creation error: ", error);
+      alert("폴더 생성에 실패했습니다.");
+    },
+  });
 
-    const newFolder: Folder = {
-      id: nextFolderId,
-      name: folderName,
-      isOpen: true,
-      files: [],
-      subFolders: [],
-    };
+  // Create file mutation
+  const { mutateAsync: createFileMutation } = useMutation({
+    mutationFn: ({ name, folderId }: { name: string; folderId: number }) => {
+      return request({
+        method: "POST",
+        url: "/files",
+        data: { name, folderId },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      setIsCreatingFile(null);
+    },
+    onError: (error) => {
+      console.error("File creation error: ", error);
+      alert("파일 생성에 실패했습니다.");
+    },
+  });
 
-    if (parentFolderId === null) {
-      // 루트 폴더에 추가
-      setRootFolders((prev) => [...prev, newFolder]);
+  const handleAddRootFolder = () => {
+    if (selectedFolderId === null) {
+      setIsCreatingFolder(0);
     } else {
-      // 하위 폴더에 추가
-      const addSubFolder = (folders: Folder[]): Folder[] =>
-        folders.map((folder) =>
-          folder.id === parentFolderId
-            ? {
-                ...folder,
-                isOpen: true, // 부모 폴더 열기
-                subFolders: [...folder.subFolders, newFolder],
-              }
-            : { ...folder, subFolders: addSubFolder(folder.subFolders) }
-        );
-
-      setRootFolders((prev) => addSubFolder(prev));
+      addSubFolder();
     }
+  };
 
-    setNextFolderId((prevId) => prevId + 1);
-    setIsCreatingFolder(null);
+  const addSubFolder = () => {
+    if (selectedFolderId !== null) {
+      setIsCreatingFolder(selectedFolderId);
+      openFolderIfClosed(selectedFolderId); // 폴더가 닫혀 있으면 열기
+    }
   };
 
   // 폴더 열기/닫기 토글
@@ -77,72 +113,71 @@ const MainPage: React.FC = () => {
     setRootFolders((prev) => toggle(prev));
   };
 
-  // 파일 생성 완료 핸들러
-  const createFile = (fileName: string, folderId: number) => {
-    if (!fileName.trim()) {
-      setIsCreatingFile(null);
-      return;
-    }
-
-    const newFile: File = {
-      id: nextFileId,
-      name: fileName,
-      type: "frontend",
-      env: {},
-    };
-
-    const addFileToFolder = (folders: Folder[]): Folder[] =>
-      folders.map((folder) =>
-        folder.id === folderId
-          ? {
-              ...folder,
-              isOpen: true, // 폴더 열기
-              files: [...folder.files, newFile],
-            }
-          : { ...folder, subFolders: addFileToFolder(folder.subFolders) }
-      );
-
-    setRootFolders((prev) => addFileToFolder(prev));
-    setNextFileId((prevId) => prevId + 1);
-    setIsCreatingFile(null);
-  };
-
-  // 하위 폴더 추가 핸들러 (입력창 열기)
-  const addSubFolder = () => {
+  const handleAddFile = () => {
     if (selectedFolderId !== null) {
-      setIsCreatingFolder(selectedFolderId);
-      openFolderIfClosed(selectedFolderId); // 폴더가 닫혀 있으면 열기
-    }
-  };
-
-  // 폴더가 닫혀있으면 열기
-  const openFolderIfClosed = (folderId: number) => {
-    const openFolder = (folders: Folder[]): Folder[] =>
-      folders.map((folder) =>
-        folder.id === folderId
-          ? { ...folder, isOpen: true }
-          : { ...folder, subFolders: openFolder(folder.subFolders) }
-      );
-
-    setRootFolders((prev) => openFolder(prev));
-  };
-
-  // 폴더 선택 핸들러
-  const selectFolder = (folderId: number) => {
-    setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
-  };
-
-  // 파일 추가 핸들러 (입력창 열기)
-  const addFile = () => {
-    if (selectedFolderId !== null) {
-      openFolderIfClosed(selectedFolderId); // 폴더가 닫혀 있으면 열기
+      openFolderIfClosed(selectedFolderId);
       setIsCreatingFile(selectedFolderId);
     }
   };
 
-  // 폴더와 파일 렌더링 (폴더 먼저, 파일 나중에 렌더링)
+  const createFolder = async (
+    folderName: string,
+    parentFolderId: number | null
+  ) => {
+    if (!folderName.trim()) {
+      setIsCreatingFolder(null);
+      return;
+    }
+    await createFolderMutation({
+      name: folderName,
+      parentFolderId: parentFolderId ?? undefined,
+    });
+  };
+
+  const createFile = async (fileName: string, folderId: number) => {
+    if (!fileName.trim()) {
+      setIsCreatingFile(null);
+      return;
+    }
+    await createFileMutation({ name: fileName, folderId });
+  };
+
+  const openFolderIfClosed = (folderId: number) => {
+    // 폴더가 닫혀있으면 열기 (로컬 스테이트 업데이트)
+    queryClient.setQueryData<Folder[]>(["folders"], (oldData: any) => {
+      if (!oldData) return oldData;
+
+      return oldData?.map((folder: Folder) =>
+        folder.id === folderId
+          ? { ...folder, isOpen: true }
+          : {
+              ...folder,
+              subFolders: openFolderIfClosedHelper(folder.subFolders, folderId),
+            }
+      );
+    });
+  };
+
+  const openFolderIfClosedHelper = (
+    folders: Folder[],
+    folderId: number
+  ): Folder[] => {
+    return folders.map((folder) =>
+      folder.id === folderId
+        ? { ...folder, isOpen: true }
+        : {
+            ...folder,
+            subFolders: openFolderIfClosedHelper(folder.subFolders, folderId),
+          }
+    );
+  };
+
+  const selectFolder = (folderId: number) => {
+    setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
+  };
+
   const renderFolders = (folders: Folder[]) => {
-    return folders.map((folder) => (
+    return folders?.map((folder) => (
       <div key={folder.id}>
         <S.FolderRow
           isSelected={selectedFolderId === folder.id}
@@ -192,10 +227,8 @@ const MainPage: React.FC = () => {
 
         {folder.isOpen && (
           <S.FolderContent>
-            {/* 하위 폴더 렌더링 */}
-            {renderFolders(folder.subFolders)}
+            {renderFolders(folder?.subFolders)}
 
-            {/* 하위 폴더 생성 입력창 */}
             {isCreatingFolder === folder.id && (
               <S.InputWrapper>
                 <input
@@ -215,9 +248,8 @@ const MainPage: React.FC = () => {
               </S.InputWrapper>
             )}
 
-            {/* 파일 렌더링 */}
             <ul style={{ marginTop: "10px" }}>
-              {folder.files.map((file) => (
+              {folder?.files?.map((file) => (
                 <li
                   key={file.id}
                   style={{ display: "flex", alignItems: "center" }}
@@ -228,7 +260,6 @@ const MainPage: React.FC = () => {
               ))}
             </ul>
 
-            {/* 파일 생성 입력창 */}
             {isCreatingFile === folder.id && (
               <S.InputWrapper>
                 <input
@@ -253,17 +284,19 @@ const MainPage: React.FC = () => {
     ));
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <S.Container>
       <CodeHeader
         title={"ENV_MANAGER"}
-        addRootFolder={() =>
-          selectedFolderId === null ? setIsCreatingFolder(0) : addSubFolder()
-        }
-        addFile={addFile}
+        addRootFolder={handleAddRootFolder}
+        addFile={handleAddFile}
       />
       <div>
-        {renderFolders(rootFolders)}
+        {rootFolders && renderFolders(rootFolders)}
         {isCreatingFolder === 0 && (
           <S.InputWrapper>
             <input
