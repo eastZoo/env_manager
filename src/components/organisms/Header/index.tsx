@@ -7,21 +7,23 @@ import * as S from "./header.style";
 interface HeaderProps {
   title: string;
   addRootFolder: () => void;
+  addFile: () => void;
 }
 
-const CodeHeader = ({ title, addRootFolder }: HeaderProps) => {
+const CodeHeader = ({ title, addRootFolder, addFile }: HeaderProps) => {
   return (
     <S.Header>
       <S.Title>{title}</S.Title>
       <S.IconGroup>
         <TbFolderPlus
-          title="Add Root Folder"
+          title="Add Folder"
           style={{ cursor: "pointer", fontSize: "24px" }}
           onClick={addRootFolder}
         />
         <LuFilePlus2
           title="Add File"
           style={{ cursor: "pointer", fontSize: "24px" }}
+          onClick={addFile}
         />
         <MdRefresh
           title="Refresh"

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { FaFolder, FaFolderOpen, FaFile } from "react-icons/fa";
-import { TbChevronRight, TbChevronDown, TbFolderPlus } from "react-icons/tb";
-import { LuFilePlus2 } from "react-icons/lu";
+import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
+import * as S from "./mainpage.style";
 
 interface File {
   id: number;
@@ -26,11 +26,6 @@ const MainPage: React.FC = () => {
   const [isCreatingFolder, setIsCreatingFolder] = useState<number | null>(null);
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
-
-  // 새로운 루트 폴더 추가 핸들러 (입력창 열기)
-  const addRootFolder = () => {
-    setIsCreatingFolder(0); // 루트 폴더 생성 상태로 설정
-  };
 
   // 폴더 생성 완료 핸들러
   const createFolder = (folderName: string, parentFolderId: number | null) => {
@@ -70,12 +65,16 @@ const MainPage: React.FC = () => {
     setIsCreatingFolder(null);
   };
 
-  // 파일 추가 핸들러 (입력창 열기)
-  const addFile = () => {
-    if (selectedFolderId !== null) {
-      setIsCreatingFile(selectedFolderId);
-      openFolderIfClosed(selectedFolderId); // 폴더가 닫혀 있으면 열기
-    }
+  // 폴더 열기/닫기 토글
+  const toggleFolder = (folderId: number) => {
+    const toggle = (folders: Folder[]): Folder[] =>
+      folders.map((folder) =>
+        folder.id === folderId
+          ? { ...folder, isOpen: !folder.isOpen }
+          : { ...folder, subFolders: toggle(folder.subFolders) }
+      );
+
+    setRootFolders((prev) => toggle(prev));
   };
 
   // 파일 생성 완료 핸들러
@@ -116,18 +115,6 @@ const MainPage: React.FC = () => {
     }
   };
 
-  // 폴더 열기/닫기 토글
-  const toggleFolder = (folderId: number) => {
-    const toggle = (folders: Folder[]): Folder[] =>
-      folders.map((folder) =>
-        folder.id === folderId
-          ? { ...folder, isOpen: !folder.isOpen }
-          : { ...folder, subFolders: toggle(folder.subFolders) }
-      );
-
-    setRootFolders((prev) => toggle(prev));
-  };
-
   // 폴더가 닫혀있으면 열기
   const openFolderIfClosed = (folderId: number) => {
     const openFolder = (folders: Folder[]): Folder[] =>
@@ -145,28 +132,26 @@ const MainPage: React.FC = () => {
     setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
   };
 
-  // 폴더와 파일 렌더링
+  // 파일 추가 핸들러 (입력창 열기)
+  const addFile = () => {
+    if (selectedFolderId !== null) {
+      openFolderIfClosed(selectedFolderId); // 폴더가 닫혀 있으면 열기
+      setIsCreatingFile(selectedFolderId);
+    }
+  };
+
+  // 폴더와 파일 렌더링 (폴더 먼저, 파일 나중에 렌더링)
   const renderFolders = (folders: Folder[]) => {
     return folders.map((folder) => (
       <div key={folder.id}>
-        {/* 폴더 행 */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            cursor: "pointer",
-            padding: "7px 0",
-            backgroundColor:
-              selectedFolderId === folder.id ? "#f0f0f0" : "transparent", // 선택된 폴더 배경 색상
-          }}
+        <S.FolderRow
+          isSelected={selectedFolderId === folder.id}
           onClick={() => selectFolder(folder.id)}
         >
           <div
             style={{ display: "flex", alignItems: "center" }}
             onClick={() => toggleFolder(folder.id)}
           >
-            {/* 화살표 아이콘 */}
             {folder.isOpen ? (
               <TbChevronDown
                 style={{
@@ -184,7 +169,6 @@ const MainPage: React.FC = () => {
                 }}
               />
             )}
-            {/* 폴더 아이콘 */}
             {folder.isOpen ? (
               <FaFolderOpen
                 style={{
@@ -202,36 +186,18 @@ const MainPage: React.FC = () => {
                 }}
               />
             )}
-            <span
-              style={{ fontSize: "18px", fontWeight: "bold", color: "#c1ccc1" }}
-            >
-              {folder.name}
-            </span>
+            <S.FolderName>{folder.name}</S.FolderName>
           </div>
-        </div>
+        </S.FolderRow>
 
-        {/* 하위 파일과 폴더 (열림 상태일 때만 렌더링) */}
         {folder.isOpen && (
-          <div style={{ marginTop: "10px", marginLeft: "25px" }}>
-            {/* 파일 */}
-            <ul style={{ marginTop: "10px" }}>
-              {folder.files.map((file) => (
-                <li
-                  key={file.id}
-                  style={{ display: "flex", alignItems: "center" }}
-                >
-                  <FaFile style={{ marginRight: "10px", fontSize: "20px" }} />
-                  <span style={{ fontSize: "16px" }}>{file.name}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* 하위 폴더 */}
+          <S.FolderContent>
+            {/* 하위 폴더 렌더링 */}
             {renderFolders(folder.subFolders)}
 
             {/* 하위 폴더 생성 입력창 */}
             {isCreatingFolder === folder.id && (
-              <div style={{ marginTop: "10px" }}>
+              <S.InputWrapper>
                 <input
                   autoFocus
                   type="text"
@@ -246,12 +212,25 @@ const MainPage: React.FC = () => {
                     }
                   }}
                 />
-              </div>
+              </S.InputWrapper>
             )}
+
+            {/* 파일 렌더링 */}
+            <ul style={{ marginTop: "10px" }}>
+              {folder.files.map((file) => (
+                <li
+                  key={file.id}
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  <FaFile style={{ marginRight: "10px", fontSize: "20px" }} />
+                  <S.FileName>{file.name}</S.FileName>
+                </li>
+              ))}
+            </ul>
 
             {/* 파일 생성 입력창 */}
             {isCreatingFile === folder.id && (
-              <div style={{ marginTop: "10px" }}>
+              <S.InputWrapper>
                 <input
                   autoFocus
                   type="text"
@@ -266,23 +245,27 @@ const MainPage: React.FC = () => {
                     }
                   }}
                 />
-              </div>
+              </S.InputWrapper>
             )}
-          </div>
+          </S.FolderContent>
         )}
       </div>
     ));
   };
 
   return (
-    <div style={{ padding: "20px 25px" }}>
-      <CodeHeader title={"ENV_MANAGER"} addRootFolder={addRootFolder} />
+    <S.Container>
+      <CodeHeader
+        title={"ENV_MANAGER"}
+        addRootFolder={() =>
+          selectedFolderId === null ? setIsCreatingFolder(0) : addSubFolder()
+        }
+        addFile={addFile}
+      />
       <div>
         {renderFolders(rootFolders)}
-
-        {/* 루트 폴더 생성 입력창 */}
         {isCreatingFolder === 0 && (
-          <div style={{ marginTop: "10px" }}>
+          <S.InputWrapper>
             <input
               autoFocus
               type="text"
@@ -294,28 +277,10 @@ const MainPage: React.FC = () => {
                 }
               }}
             />
-          </div>
+          </S.InputWrapper>
         )}
       </div>
-      <div style={{ marginTop: "20px" }}>
-        {/* CodeHeader의 버튼을 이용한 파일 및 하위 폴더 생성 */}
-        <LuFilePlus2
-          onClick={addFile}
-          style={{
-            cursor: "pointer",
-            fontSize: "24px",
-            color: "#007bff",
-            marginRight: "10px",
-          }}
-          title="Add File to Selected Folder"
-        />
-        <TbFolderPlus
-          onClick={addSubFolder}
-          style={{ cursor: "pointer", fontSize: "24px", color: "#ffc107" }}
-          title="Add Subfolder to Selected Folder"
-        />
-      </div>
-    </div>
+    </S.Container>
   );
 };
 
