@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FaFolder, FaFolderOpen, FaFile } from "react-icons/fa";
+import {
+  FaFolder,
+  FaFolderOpen,
+  FaRegFile,
+  FaPython,
+  FaJs,
+  FaFileAlt,
+} from "react-icons/fa";
 import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
 import * as S from "./mainpage.style";
@@ -10,6 +17,7 @@ interface File {
   id: number;
   name: string;
   type: string;
+  fileType: string; // 확장자에 따른 아이콘 결정
   env: Record<string, string>;
 }
 
@@ -22,13 +30,15 @@ interface Folder {
 }
 
 const MainPage: React.FC = () => {
-  const [rootFolders, setRootFolders] = useState<Folder[]>([]);
+  /** ============================= state 영역 ============================= */
   const [isCreatingFolder, setIsCreatingFolder] = useState<number | null>(null);
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [newFileName, setNewFileName] = useState<string>(""); // 파일 이름 상태
 
   const queryClient = useQueryClient();
 
+  /** ============================= API 영역 ============================= */
   // Fetch all root folders
   const { data: rootFoldersData, isLoading } = useQuery({
     queryKey: ["folders"],
@@ -37,24 +47,17 @@ const MainPage: React.FC = () => {
         method: "GET",
         url: "/folders",
       });
-      setRootFolders(result); // 로컬 스테이트에 데이터 저장
       return result;
     },
   });
 
   // Create folder mutation
   const { mutateAsync: createFolderMutation } = useMutation({
-    mutationFn: ({
-      name,
-      parentFolderId,
-    }: {
-      name: string;
-      parentFolderId?: number;
-    }) => {
+    mutationFn: (data: { name: string; parentFolderId?: number }) => {
       return request({
         method: "POST",
         url: "/folders",
-        data: { name, parentFolderId },
+        data,
       });
     },
     onSuccess: () => {
@@ -86,6 +89,8 @@ const MainPage: React.FC = () => {
     },
   });
 
+  /** ============================= 비즈니스 로직 영역 ============================= */
+
   const handleAddRootFolder = () => {
     if (selectedFolderId === null) {
       setIsCreatingFolder(0);
@@ -103,14 +108,32 @@ const MainPage: React.FC = () => {
 
   // 폴더 열기/닫기 토글
   const toggleFolder = (folderId: number) => {
-    const toggle = (folders: Folder[]): Folder[] =>
-      folders.map((folder) =>
+    queryClient.setQueryData<Folder[]>(["folders"], (oldData) => {
+      if (!oldData) return oldData;
+
+      return oldData?.map((folder) =>
         folder.id === folderId
           ? { ...folder, isOpen: !folder.isOpen }
-          : { ...folder, subFolders: toggle(folder.subFolders) }
+          : {
+              ...folder,
+              subFolders: toggleFolderHelper(folder.subFolders, folderId),
+            }
       );
+    });
+  };
 
-    setRootFolders((prev) => toggle(prev));
+  const toggleFolderHelper = (
+    folders: Folder[],
+    folderId: number
+  ): Folder[] => {
+    return folders?.map((folder) =>
+      folder.id === folderId
+        ? { ...folder, isOpen: !folder.isOpen }
+        : {
+            ...folder,
+            subFolders: toggleFolderHelper(folder.subFolders, folderId),
+          }
+    );
   };
 
   const handleAddFile = () => {
@@ -143,11 +166,10 @@ const MainPage: React.FC = () => {
   };
 
   const openFolderIfClosed = (folderId: number) => {
-    // 폴더가 닫혀있으면 열기 (로컬 스테이트 업데이트)
-    queryClient.setQueryData<Folder[]>(["folders"], (oldData: any) => {
+    queryClient.setQueryData<Folder[]>(["folders"], (oldData) => {
       if (!oldData) return oldData;
 
-      return oldData?.map((folder: Folder) =>
+      return oldData?.map((folder) =>
         folder.id === folderId
           ? { ...folder, isOpen: true }
           : {
@@ -162,7 +184,7 @@ const MainPage: React.FC = () => {
     folders: Folder[],
     folderId: number
   ): Folder[] => {
-    return folders.map((folder) =>
+    return folders?.map((folder) =>
       folder.id === folderId
         ? { ...folder, isOpen: true }
         : {
@@ -176,7 +198,35 @@ const MainPage: React.FC = () => {
     setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
   };
 
+  /** ============================= 컴포넌트 영역 ============================= */
+
+  // 확장자에 따른 아이콘 결정 로직
+  const getFileIcon = (fileName: string) => {
+    if (fileName.endsWith(".py")) {
+      return (
+        <FaPython
+          style={{ marginRight: "10px", fontSize: "25px", color: "#3572A5" }}
+        />
+      );
+    } else if (fileName.endsWith(".js")) {
+      return (
+        <FaJs
+          style={{ marginRight: "10px", fontSize: "25px", color: "#f0db4f" }}
+        />
+      );
+    } else if (fileName.endsWith(".env")) {
+      return (
+        <FaFileAlt
+          style={{ marginRight: "10px", fontSize: "25px", color: "#74b816" }}
+        />
+      );
+    } else {
+      return <FaRegFile style={{ marginRight: "10px", fontSize: "25px" }} />;
+    }
+  };
+
   const renderFolders = (folders: Folder[]) => {
+    console.log("folders", folders);
     return folders?.map((folder) => (
       <div key={folder.id}>
         <S.FolderRow
@@ -227,10 +277,24 @@ const MainPage: React.FC = () => {
 
         {folder.isOpen && (
           <S.FolderContent>
-            {renderFolders(folder?.subFolders)}
+            {renderFolders(folder.subFolders)}
 
             {isCreatingFolder === folder.id && (
               <S.InputWrapper>
+                <TbChevronRight
+                  style={{
+                    marginRight: "10px",
+                    fontSize: "19px",
+                    color: "#aabbaa",
+                  }}
+                />
+                <FaFolder
+                  style={{
+                    marginRight: "10px",
+                    fontSize: "25px",
+                    color: "#90a4ae",
+                  }}
+                />
                 <input
                   autoFocus
                   type="text"
@@ -244,17 +308,28 @@ const MainPage: React.FC = () => {
                       );
                     }
                   }}
+                  style={{
+                    backgroundColor: "#313131",
+                    outline: "none",
+                    border: "none",
+                    color: "white",
+                  }}
                 />
               </S.InputWrapper>
             )}
-
-            <ul style={{ marginTop: "10px" }}>
+            {/* 파일 렌더링 부분  */}
+            <ul style={{ marginTop: "5px", marginLeft: "3px" }}>
               {folder?.files?.map((file) => (
                 <li
                   key={file.id}
-                  style={{ display: "flex", alignItems: "center" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    margin: "10px 0",
+                  }}
                 >
-                  <FaFile style={{ marginRight: "10px", fontSize: "20px" }} />
+                  {/* 파일 아이콘 렌더링 부분 */}
+                  {getFileIcon(file.fileType)}
                   <S.FileName>{file.name}</S.FileName>
                 </li>
               ))}
@@ -262,10 +337,13 @@ const MainPage: React.FC = () => {
 
             {isCreatingFile === folder.id && (
               <S.InputWrapper>
+                {getFileIcon(newFileName)}
                 <input
                   autoFocus
                   type="text"
                   placeholder="New File Name"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
                   onBlur={(e) => createFile(e.target.value, folder.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -274,6 +352,12 @@ const MainPage: React.FC = () => {
                         folder.id
                       );
                     }
+                  }}
+                  style={{
+                    backgroundColor: "#313131",
+                    outline: "none",
+                    border: "none",
+                    color: "white",
                   }}
                 />
               </S.InputWrapper>
@@ -287,6 +371,7 @@ const MainPage: React.FC = () => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
+  /** ============================= useEffect 영역 ============================= */
 
   return (
     <S.Container>
@@ -296,9 +381,23 @@ const MainPage: React.FC = () => {
         addFile={handleAddFile}
       />
       <div>
-        {rootFolders && renderFolders(rootFolders)}
+        {rootFoldersData && renderFolders(rootFoldersData)}
         {isCreatingFolder === 0 && (
           <S.InputWrapper>
+            <TbChevronRight
+              style={{
+                marginRight: "10px",
+                fontSize: "19px",
+                color: "#aabbaa",
+              }}
+            />
+            <FaFolder
+              style={{
+                marginRight: "10px",
+                fontSize: "25px",
+                color: "#90a4ae",
+              }}
+            />
             <input
               autoFocus
               type="text"
@@ -308,6 +407,12 @@ const MainPage: React.FC = () => {
                 if (e.key === "Enter") {
                   createFolder((e.target as HTMLInputElement).value, null);
                 }
+              }}
+              style={{
+                backgroundColor: "#313131",
+                outline: "none",
+                border: "none",
+                color: "white",
               }}
             />
           </S.InputWrapper>

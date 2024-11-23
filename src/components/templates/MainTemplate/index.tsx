@@ -13,7 +13,7 @@ export const MainTemplate = () => {
       <SideBanner />
       {/* 라우트에 따른 메인 컴포넌트 */}
       <S.ContentSection>
-        <header>헤더입니다.</header>
+        {/* <header>헤더입니다.</header> */}
         <Outlet />
         <S.MainFooter>
           <S.MainFooterInner>

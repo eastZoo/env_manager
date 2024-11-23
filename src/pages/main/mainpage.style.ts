@@ -11,7 +11,7 @@ export const FolderRow = styled.div<{ isSelected: boolean }>`
   cursor: pointer;
   padding: 7px 0;
   background-color: ${(props) =>
-    props.isSelected ? "#f0f0f0" : "transparent"};
+    props.isSelected ? "#37373d" : "transparent"};
 `;
 
 export const FolderName = styled.span`
@@ -26,11 +26,13 @@ export const FolderContent = styled.div`
 `;
 
 export const FileName = styled.span`
-  font-size: 16px;
+  font-size: 18px;
+  color: #c1ccc1;
 `;
 
 export const InputWrapper = styled.div`
   margin-top: 10px;
+  display: flex;
 
   input {
     width: 100%;
