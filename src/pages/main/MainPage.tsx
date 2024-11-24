@@ -40,7 +40,11 @@ const MainPage: React.FC = () => {
 
   /** ============================= API 영역 ============================= */
   // Fetch all root folders
-  const { data: rootFoldersData, isLoading } = useQuery({
+  const {
+    data: rootFoldersData,
+    isLoading,
+    refetch: FoldersDataRefetch,
+  } = useQuery({
     queryKey: ["folders"],
     queryFn: async () => {
       const result = await request<Folder[]>({
@@ -198,11 +202,35 @@ const MainPage: React.FC = () => {
     setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
   };
 
+  /** 모든 토글 close 함수  */
+  const closeAllToggles = () => {
+    queryClient.setQueryData<Folder[]>(["folders"], (oldData) => {
+      if (!oldData) return oldData;
+
+      const closeAllFolders = (folders: Folder[]): Folder[] => {
+        return folders.map((folder) => ({
+          ...folder,
+          isOpen: false,
+          subFolders: closeAllFolders(folder.subFolders),
+        }));
+      };
+
+      return closeAllFolders(oldData);
+    });
+  };
+
   /** ============================= 컴포넌트 영역 ============================= */
 
   // 확장자에 따른 아이콘 결정 로직
   const getFileIcon = (fileName: string) => {
-    if (fileName.endsWith(".py")) {
+    // 파일 확장자 없을 때
+    if (fileName === null) {
+      return (
+        <FaRegFile
+          style={{ marginRight: "10px", fontSize: "25px", color: "#90a4ae" }}
+        />
+      );
+    } else if (fileName.endsWith(".py")) {
       return (
         <FaPython
           style={{ marginRight: "10px", fontSize: "25px", color: "#3572A5" }}
@@ -221,22 +249,25 @@ const MainPage: React.FC = () => {
         />
       );
     } else {
-      return <FaRegFile style={{ marginRight: "10px", fontSize: "25px" }} />;
+      return (
+        <FaRegFile
+          style={{ marginRight: "10px", fontSize: "25px", color: "#90a4ae" }}
+        />
+      );
     }
   };
 
   const renderFolders = (folders: Folder[]) => {
-    console.log("folders", folders);
     return folders?.map((folder) => (
       <div key={folder.id}>
         <S.FolderRow
           isSelected={selectedFolderId === folder.id}
-          onClick={() => selectFolder(folder.id)}
+          onClick={() => {
+            toggleFolder(folder.id);
+            selectFolder(folder.id);
+          }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center" }}
-            onClick={() => toggleFolder(folder.id)}
-          >
+          <div style={{ display: "flex", alignItems: "center" }}>
             {folder.isOpen ? (
               <TbChevronDown
                 style={{
@@ -329,7 +360,7 @@ const MainPage: React.FC = () => {
                   }}
                 >
                   {/* 파일 아이콘 렌더링 부분 */}
-                  {getFileIcon(file.fileType)}
+                  {getFileIcon(file?.fileType)}
                   <S.FileName>{file.name}</S.FileName>
                 </li>
               ))}
@@ -379,8 +410,10 @@ const MainPage: React.FC = () => {
         title={"ENV_MANAGER"}
         addRootFolder={handleAddRootFolder}
         addFile={handleAddFile}
+        refreshFolder={FoldersDataRefetch}
+        closeAllToggles={closeAllToggles}
       />
-      <div>
+      <S.FolderContainer>
         {rootFoldersData && renderFolders(rootFoldersData)}
         {isCreatingFolder === 0 && (
           <S.InputWrapper>
@@ -417,7 +450,7 @@ const MainPage: React.FC = () => {
             />
           </S.InputWrapper>
         )}
-      </div>
+      </S.FolderContainer>
     </S.Container>
   );
 };

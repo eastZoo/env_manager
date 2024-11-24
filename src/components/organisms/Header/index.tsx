@@ -8,9 +8,17 @@ interface HeaderProps {
   title: string;
   addRootFolder: () => void;
   addFile: () => void;
+  refreshFolder: () => void;
+  closeAllToggles: () => void;
 }
 
-const CodeHeader = ({ title, addRootFolder, addFile }: HeaderProps) => {
+const CodeHeader = ({
+  title,
+  addRootFolder,
+  addFile,
+  refreshFolder,
+  closeAllToggles,
+}: HeaderProps) => {
   return (
     <S.Header>
       <S.Title>{title}</S.Title>
@@ -28,10 +36,12 @@ const CodeHeader = ({ title, addRootFolder, addFile }: HeaderProps) => {
         <MdRefresh
           title="Refresh"
           style={{ cursor: "pointer", fontSize: "24px" }}
+          onClick={refreshFolder}
         />
         <TbLibraryMinus
           title="Settings"
           style={{ cursor: "pointer", fontSize: "24px" }}
+          onClick={closeAllToggles}
         />
       </S.IconGroup>
     </S.Header>

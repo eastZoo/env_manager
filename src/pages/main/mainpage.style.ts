@@ -9,7 +9,8 @@ export const FolderRow = styled.div<{ isSelected: boolean }>`
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  padding: 7px 0;
+  padding: 8px 0;
+
   background-color: ${(props) =>
     props.isSelected ? "#37373d" : "transparent"};
 `;
@@ -21,17 +22,17 @@ export const FolderName = styled.span`
 `;
 
 export const FolderContent = styled.div`
-  margin-top: 10px;
   margin-left: 25px;
 `;
 
 export const FileName = styled.span`
   font-size: 18px;
   color: #c1ccc1;
+  margin-bottom: 10px; /* 파일 간의 간격 설정 */
 `;
-
 export const InputWrapper = styled.div`
   margin-top: 10px;
+  margin-bottom: 10px; /* 입력 창 간의 간격 설정 */
   display: flex;
 
   input {
@@ -54,5 +55,23 @@ export const HeaderControls = styled.div`
     &:hover {
       opacity: 0.8;
     }
+  }
+`;
+
+export const FolderContainer = styled.div`
+  overflow: auto; /* overflow: scroll에서 auto로 변경 */
+  height: calc(100vh - 120px);
+
+  ::-webkit-scrollbar {
+    width: 8px; /* 스크롤바 너비 설정 */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #606060; /* 스크롤바 색상 */
+    border-radius: 4px; /* 스크롤바 모서리 둥글게 */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #313131; /* 스크롤 트랙 색상 */
   }
 `;
