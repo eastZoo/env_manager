@@ -15,7 +15,7 @@ export const MainTemplate = () => {
       <S.ContentSection>
         {/* <header>헤더입니다.</header> */}
         <Outlet />
-        <S.MainFooter>
+        {/* <S.MainFooter>
           <S.MainFooterInner>
             <Link to="/support"></Link>
             <Link to="/">2</Link>
@@ -23,7 +23,7 @@ export const MainTemplate = () => {
             <Link to="/">4</Link>
             <Link to="/">5</Link>
           </S.MainFooterInner>
-        </S.MainFooter>
+        </S.MainFooter> */}
       </S.ContentSection>
     </S.MainTemplate>
   );

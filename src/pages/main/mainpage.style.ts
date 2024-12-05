@@ -60,7 +60,7 @@ export const HeaderControls = styled.div`
 
 export const FolderContainer = styled.div`
   overflow: auto; /* overflow: scroll에서 auto로 변경 */
-  height: calc(100vh - 120px);
+  height: calc(100vh - 80px);
 
   ::-webkit-scrollbar {
     width: 8px; /* 스크롤바 너비 설정 */

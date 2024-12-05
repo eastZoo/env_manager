@@ -7,11 +7,15 @@ import {
   FaPython,
   FaJs,
   FaFileAlt,
+  FaTrash,
 } from "react-icons/fa";
 import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
 import * as S from "./mainpage.style";
 import { request } from "../../lib/api";
+import DeleteModal from "../../components/containers/Modal/DeleteModal";
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface File {
   id: number;
@@ -35,6 +39,11 @@ const MainPage: React.FC = () => {
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [newFileName, setNewFileName] = useState<string>(""); // 파일 이름 상태
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "folder" | "file";
+    id: number;
+  } | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -93,6 +102,44 @@ const MainPage: React.FC = () => {
     },
   });
 
+  // Delete folder mutation
+  const { mutateAsync: deleteFolderMutation } = useMutation({
+    mutationFn: (folderId: number) => {
+      return request({
+        method: "DELETE",
+        url: `/folders/${folderId}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+    },
+    onError: (error) => {
+      console.error("Folder deletion error: ", error);
+      alert("폴더 삭제에 실패했습니다.");
+    },
+  });
+
+  // Delete file mutation
+  const { mutateAsync: deleteFileMutation } = useMutation({
+    mutationFn: (fileId: number) => {
+      return request({
+        method: "DELETE",
+        url: `/files/${fileId}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
+    },
+    onError: (error) => {
+      console.error("File deletion error: ", error);
+      alert("파일 삭제에 실패했습니다.");
+    },
+  });
+
   /** ============================= 비즈니스 로직 영역 ============================= */
 
   const handleAddRootFolder = () => {
@@ -144,6 +191,15 @@ const MainPage: React.FC = () => {
     if (selectedFolderId !== null) {
       openFolderIfClosed(selectedFolderId);
       setIsCreatingFile(selectedFolderId);
+    } else {
+      toast.warn("폴더를 먼저 선택해주세요.", {
+        position: "bottom-center",
+        autoClose: 1500,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        transition: Slide,
+      });
     }
   };
 
@@ -219,6 +275,21 @@ const MainPage: React.FC = () => {
     });
   };
 
+  const openDeleteModal = (type: "folder" | "file", id: number) => {
+    setDeleteTarget({ type, id });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeletion = async () => {
+    if (deleteTarget) {
+      if (deleteTarget.type === "folder") {
+        await deleteFolderMutation(deleteTarget.id);
+      } else if (deleteTarget.type === "file") {
+        await deleteFileMutation(deleteTarget.id);
+      }
+    }
+  };
+
   /** ============================= 컴포넌트 영역 ============================= */
 
   // 확장자에 따른 아이콘 결정 로직
@@ -267,7 +338,7 @@ const MainPage: React.FC = () => {
             selectFolder(folder.id);
           }}
         >
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             {folder.isOpen ? (
               <TbChevronDown
                 style={{
@@ -303,6 +374,18 @@ const MainPage: React.FC = () => {
               />
             )}
             <S.FolderName>{folder.name}</S.FolderName>
+            <FaTrash
+              onClick={(e) => {
+                e.stopPropagation();
+                openDeleteModal("folder", folder.id);
+              }}
+              style={{
+                marginLeft: "auto",
+                fontSize: "18px",
+                color: "#afafaf",
+                cursor: "pointer",
+              }}
+            />
           </div>
         </S.FolderRow>
 
@@ -357,11 +440,21 @@ const MainPage: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     margin: "10px 0",
+                    width: "100%",
                   }}
                 >
                   {/* 파일 아이콘 렌더링 부분 */}
                   {getFileIcon(file?.fileType)}
                   <S.FileName>{file.name}</S.FileName>
+                  <FaTrash
+                    onClick={() => openDeleteModal("file", file.id)}
+                    style={{
+                      marginLeft: "auto",
+                      fontSize: "18px",
+                      color: "#afafaf",
+                      cursor: "pointer",
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -451,6 +544,15 @@ const MainPage: React.FC = () => {
           </S.InputWrapper>
         )}
       </S.FolderContainer>
+      {isDeleteModalOpen && (
+        <DeleteModal
+          title="삭제 확인"
+          description="정말 삭제하시겠습니까?"
+          onCancel={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDeletion}
+        />
+      )}
+      <ToastContainer />
     </S.Container>
   );
 };
