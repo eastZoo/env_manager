@@ -17,12 +17,13 @@ import DeleteModal from "../../components/containers/Modal/DeleteModal";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-interface File {
+export interface File {
   id: number;
   name: string;
   type: string;
   fileType: string; // 확장자에 따른 아이콘 결정
-  env: Record<string, string>;
+  content: string;
+  deletedAt: any;
 }
 
 interface Folder {
@@ -37,13 +38,19 @@ const MainPage: React.FC = () => {
   /** ============================= state 영역 ============================= */
   const [isCreatingFolder, setIsCreatingFolder] = useState<number | null>(null);
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null); // 선택된 폴더 ID
+  const [selectedFileId, setSelectedFileId] = useState<number | null>(null); // 선택된 파일 ID
+
   const [newFileName, setNewFileName] = useState<string>(""); // 파일 이름 상태
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "folder" | "file";
     id: number;
   } | null>(null);
+  const [selectedFileContent, setSelectedFileContent] = useState<string | null>(
+    null
+  ); // 선택된 파일 내용
 
   const queryClient = useQueryClient();
 
@@ -63,6 +70,28 @@ const MainPage: React.FC = () => {
       return result;
     },
   });
+
+  // Fetch file content by fileId
+  const fetchFileContent = async (fileId: number) => {
+    try {
+      const result = await request<File>({
+        method: "GET",
+        url: `/files/${fileId}/content`,
+      });
+      return result;
+    } catch (error) {
+      console.error("File fetch error: ", error);
+      toast.error("파일 내용을 불러오는데 실패했습니다.", {
+        position: "bottom-center",
+        autoClose: 1500,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        transition: Slide,
+      });
+      return null;
+    }
+  };
 
   // Create folder mutation
   const { mutateAsync: createFolderMutation } = useMutation({
@@ -141,6 +170,18 @@ const MainPage: React.FC = () => {
   });
 
   /** ============================= 비즈니스 로직 영역 ============================= */
+
+  const handleFileClick = async (fileId: number) => {
+    if (selectedFileId === fileId) {
+      // 동일한 파일을 다시 클릭하면 content를 닫음
+      setSelectedFileId(null);
+      setSelectedFileContent(null);
+    } else {
+      const content = await fetchFileContent(fileId);
+      setSelectedFileId(fileId);
+      setSelectedFileContent(content?.content || "");
+    }
+  };
 
   const handleAddRootFolder = () => {
     if (selectedFolderId === null) {
@@ -436,6 +477,7 @@ const MainPage: React.FC = () => {
               {folder?.files?.map((file) => (
                 <li
                   key={file.id}
+                  onClick={() => handleFileClick(file.id)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -443,18 +485,23 @@ const MainPage: React.FC = () => {
                     width: "100%",
                   }}
                 >
-                  {/* 파일 아이콘 렌더링 부분 */}
-                  {getFileIcon(file?.fileType)}
-                  <S.FileName>{file.name}</S.FileName>
-                  <FaTrash
-                    onClick={() => openDeleteModal("file", file.id)}
-                    style={{
-                      marginLeft: "auto",
-                      fontSize: "18px",
-                      color: "#afafaf",
-                      cursor: "pointer",
-                    }}
-                  />
+                  <S.FileRow isSelected={selectedFileId === file.id}>
+                    {getFileIcon(file?.fileType)}
+                    <S.FileName>{file.name}</S.FileName>
+                    <div style={{ marginLeft: "auto" }}>
+                      <FaTrash
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModal("file", file.id);
+                        }}
+                        style={{
+                          fontSize: "18px",
+                          color: "#afafaf",
+                          cursor: "pointer",
+                        }}
+                      />
+                    </div>
+                  </S.FileRow>
                 </li>
               ))}
             </ul>
@@ -506,44 +553,62 @@ const MainPage: React.FC = () => {
         refreshFolder={FoldersDataRefetch}
         closeAllToggles={closeAllToggles}
       />
-      <S.FolderContainer>
-        {rootFoldersData && renderFolders(rootFoldersData)}
-        {isCreatingFolder === 0 && (
-          <S.InputWrapper>
-            <TbChevronRight
+      <S.MainSplitContainer>
+        <S.FolderContainer isExpanded={!!selectedFileContent}>
+          {rootFoldersData && renderFolders(rootFoldersData)}
+          {isCreatingFolder === 0 && (
+            <S.InputWrapper>
+              <TbChevronRight
+                style={{
+                  marginRight: "10px",
+                  fontSize: "19px",
+                  color: "#aabbaa",
+                }}
+              />
+              <FaFolder
+                style={{
+                  marginRight: "10px",
+                  fontSize: "25px",
+                  color: "#90a4ae",
+                }}
+              />
+              <input
+                autoFocus
+                type="text"
+                placeholder="New Folder Name"
+                onBlur={(e) => createFolder(e.target.value, null)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    createFolder((e.target as HTMLInputElement).value, null);
+                  }
+                }}
+                style={{
+                  backgroundColor: "#313131",
+                  outline: "none",
+                  border: "none",
+                  color: "white",
+                }}
+              />
+            </S.InputWrapper>
+          )}
+        </S.FolderContainer>
+
+        {selectedFileContent && (
+          <S.ContentViewer>
+            <pre
               style={{
-                marginRight: "10px",
-                fontSize: "19px",
-                color: "#aabbaa",
+                backgroundColor: "#2c2c2c",
+                color: "#ffffff",
+                padding: "10px",
+                height: "100%",
+                overflow: "auto",
               }}
-            />
-            <FaFolder
-              style={{
-                marginRight: "10px",
-                fontSize: "25px",
-                color: "#90a4ae",
-              }}
-            />
-            <input
-              autoFocus
-              type="text"
-              placeholder="New Folder Name"
-              onBlur={(e) => createFolder(e.target.value, null)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  createFolder((e.target as HTMLInputElement).value, null);
-                }
-              }}
-              style={{
-                backgroundColor: "#313131",
-                outline: "none",
-                border: "none",
-                color: "white",
-              }}
-            />
-          </S.InputWrapper>
+            >
+              {selectedFileContent}
+            </pre>
+          </S.ContentViewer>
         )}
-      </S.FolderContainer>
+      </S.MainSplitContainer>
       {isDeleteModalOpen && (
         <DeleteModal
           title="삭제 확인"
