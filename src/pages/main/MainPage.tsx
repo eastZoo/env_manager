@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   FaFolder,
@@ -8,6 +8,7 @@ import {
   FaJs,
   FaFileAlt,
   FaTrash,
+  FaCopy,
 } from "react-icons/fa";
 import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
@@ -16,6 +17,8 @@ import { request } from "../../lib/api";
 import DeleteModal from "../../components/containers/Modal/DeleteModal";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import hljs from "highlight.js";
+import "highlight.js/styles/atom-one-dark.css";
 
 export interface File {
   id: number;
@@ -40,7 +43,7 @@ const MainPage: React.FC = () => {
   const [isCreatingFile, setIsCreatingFile] = useState<number | null>(null);
 
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null); // 선택된 폴더 ID
-  const [selectedFileId, setSelectedFileId] = useState<number | null>(null); // 선택된 파일 ID
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // 선택된 파일 정보
 
   const [newFileName, setNewFileName] = useState<string>(""); // 파일 이름 상태
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
@@ -52,7 +55,11 @@ const MainPage: React.FC = () => {
     null
   ); // 선택된 파일 내용
 
+  const [isContentVisible, setIsContentVisible] = useState(false);
+
   const queryClient = useQueryClient();
+
+  const codeRef = useRef<HTMLElement>(null);
 
   /** ============================= API 영역 ============================= */
   // Fetch all root folders
@@ -171,15 +178,16 @@ const MainPage: React.FC = () => {
 
   /** ============================= 비즈니스 로직 영역 ============================= */
 
-  const handleFileClick = async (fileId: number) => {
-    if (selectedFileId === fileId) {
-      // 동일한 파일을 다시 클릭하면 content를 닫음
-      setSelectedFileId(null);
-      setSelectedFileContent(null);
+  const handleFileClick = async (file: File) => {
+    if (selectedFile?.id === file.id) {
+      setIsContentVisible(false);
+      setTimeout(() => {
+        setSelectedFile(null);
+      }, 300);
     } else {
-      const content = await fetchFileContent(fileId);
-      setSelectedFileId(fileId);
-      setSelectedFileContent(content?.content || "");
+      const content = await fetchFileContent(file.id);
+      setSelectedFile(file);
+      setIsContentVisible(true);
     }
   };
 
@@ -339,31 +347,31 @@ const MainPage: React.FC = () => {
     if (fileName === null) {
       return (
         <FaRegFile
-          style={{ marginRight: "10px", fontSize: "25px", color: "#90a4ae" }}
+          style={{ marginRight: "10px", fontSize: "20px", color: "#90a4ae" }}
         />
       );
     } else if (fileName.endsWith(".py")) {
       return (
         <FaPython
-          style={{ marginRight: "10px", fontSize: "25px", color: "#3572A5" }}
+          style={{ marginRight: "10px", fontSize: "20px", color: "#3572A5" }}
         />
       );
     } else if (fileName.endsWith(".js")) {
       return (
         <FaJs
-          style={{ marginRight: "10px", fontSize: "25px", color: "#f0db4f" }}
+          style={{ marginRight: "10px", fontSize: "20px", color: "#f0db4f" }}
         />
       );
     } else if (fileName.endsWith(".env")) {
       return (
         <FaFileAlt
-          style={{ marginRight: "10px", fontSize: "25px", color: "#74b816" }}
+          style={{ marginRight: "10px", fontSize: "20px", color: "#74b816" }}
         />
       );
     } else {
       return (
         <FaRegFile
-          style={{ marginRight: "10px", fontSize: "25px", color: "#90a4ae" }}
+          style={{ marginRight: "10px", fontSize: "20px", color: "#90a4ae" }}
         />
       );
     }
@@ -477,7 +485,7 @@ const MainPage: React.FC = () => {
               {folder?.files?.map((file) => (
                 <li
                   key={file.id}
-                  onClick={() => handleFileClick(file.id)}
+                  onClick={() => handleFileClick(file)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -485,7 +493,7 @@ const MainPage: React.FC = () => {
                     width: "100%",
                   }}
                 >
-                  <S.FileRow isSelected={selectedFileId === file.id}>
+                  <S.FileRow isSelected={selectedFile?.id === file.id}>
                     {getFileIcon(file?.fileType)}
                     <S.FileName>{file.name}</S.FileName>
                     <div style={{ marginLeft: "auto" }}>
@@ -539,10 +547,58 @@ const MainPage: React.FC = () => {
     ));
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
   /** ============================= useEffect 영역 ============================= */
+
+  // 파일 확장자에 따른 언어 감지
+  const detectLanguage = (fileName: string) => {
+    console.log("detectLanguage", fileName);
+    const extension = fileName.toLowerCase();
+
+    if (extension.endsWith(".py")) return "python";
+    if (extension.endsWith(".js") || extension.endsWith(".jsx"))
+      return "javascript";
+    if (extension.endsWith(".ts") || extension.endsWith(".tsx"))
+      return "typescript";
+    if (extension.endsWith(".env")) return "properties";
+    if (extension.endsWith(".json")) return "json";
+    if (extension.endsWith(".html")) return "html";
+    if (extension.endsWith(".css")) return "css";
+    if (extension.endsWith(".md")) return "markdown";
+    if (extension.endsWith(".sql")) return "sql";
+    if (extension.endsWith(".xml")) return "xml";
+    if (extension.endsWith(".yaml") || extension.endsWith(".yml"))
+      return "yaml";
+
+    return "plaintext";
+  };
+
+  // 파일 내용이 변경될 때마다 하이라이팅 적용
+  useEffect(() => {
+    if (codeRef.current && selectedFile?.content) {
+      // 명시적으로 언어 지정하여 하이라이팅
+      const language = detectLanguage(selectedFile?.fileType);
+      const highlightedCode = hljs.highlight(selectedFile.content, {
+        language: language,
+      }).value;
+      codeRef.current.innerHTML = highlightedCode;
+    }
+  }, [selectedFile?.content]);
+
+  // 복사 기능을 위한 함수 추가
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("코드가 클립보드에 복사되었습니다.", {
+        position: "bottom-center",
+        autoClose: 1500,
+      });
+    } catch (err) {
+      toast.error("복사에 실패했습니다.", {
+        position: "bottom-center",
+        autoClose: 1500,
+      });
+    }
+  };
 
   return (
     <S.Container>
@@ -554,7 +610,7 @@ const MainPage: React.FC = () => {
         closeAllToggles={closeAllToggles}
       />
       <S.MainSplitContainer>
-        <S.FolderContainer isExpanded={!!selectedFileContent}>
+        <S.FolderContainer isExpanded={!!selectedFile?.content}>
           {rootFoldersData && renderFolders(rootFoldersData)}
           {isCreatingFolder === 0 && (
             <S.InputWrapper>
@@ -593,18 +649,28 @@ const MainPage: React.FC = () => {
           )}
         </S.FolderContainer>
 
-        {selectedFileContent && (
-          <S.ContentViewer>
-            <pre
-              style={{
-                backgroundColor: "#2c2c2c",
-                color: "#ffffff",
-                padding: "10px",
-                height: "100%",
-                overflow: "auto",
-              }}
-            >
-              {selectedFileContent}
+        {selectedFile && (
+          <S.ContentViewer isVisible={isContentVisible}>
+            <S.CodeHeader>
+              <S.FileInfoWrapper>
+                {getFileIcon(selectedFile?.fileType)}
+                <span style={{ color: "#abb2bf" }}>{selectedFile?.name}</span>
+              </S.FileInfoWrapper>
+              <S.CopyButton
+                onClick={() => copyToClipboard(selectedFile?.content)}
+              >
+                <FaCopy />
+                Copy code
+              </S.CopyButton>
+            </S.CodeHeader>
+            <pre>
+              <code
+                ref={codeRef}
+                className={`hljs language-${detectLanguage(
+                  selectedFile?.fileType
+                )}`}
+                style={{ background: "inherit" }}
+              />
             </pre>
           </S.ContentViewer>
         )}

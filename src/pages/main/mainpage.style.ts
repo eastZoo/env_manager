@@ -16,7 +16,7 @@ export const FolderRow = styled.div<{ isSelected: boolean }>`
 `;
 
 export const FolderName = styled.span`
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #c1ccc1;
 `;
@@ -26,7 +26,7 @@ export const FolderContent = styled.div`
 `;
 
 export const FileName = styled.span`
-  font-size: 18px;
+  font-size: 16px;
   color: #c1ccc1;
   margin-bottom: 10px; /* 파일 간의 간격 설정 */
 `;
@@ -62,7 +62,7 @@ export const HeaderControls = styled.div`
 export const FolderContainer = styled.div<{ isExpanded: boolean }>`
   overflow: auto;
   height: ${(props) => (props.isExpanded ? "50vh" : "100vh")};
-  transition: height 0.4s ease-in-out;
+  transition: height 0.3s ease-in-out;
 
   ::-webkit-scrollbar {
     width: 8px; /* 스크롤바 너비 설정 */
@@ -78,13 +78,75 @@ export const FolderContainer = styled.div<{ isExpanded: boolean }>`
   }
 `;
 
-export const ContentViewer = styled.div`
-  height: 50vh; /* 화면의 절반 높이 */
-  background-color: #2c2c2c;
-  color: white;
-  padding: 10px;
-  overflow: auto;
-  border-top: 1px solid #444;
+export const ContentViewer = styled.div<{ isVisible: boolean }>`
+  height: 50vh;
+  background-color: #2a2a2aff;
+  border-radius: 8px;
+  margin: 20px 0;
+  position: relative;
+  transform: translateY(${(props) => (props.isVisible ? "0" : "100%")});
+  opacity: ${(props) => (props.isVisible ? "1" : "0")};
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+
+  pre {
+    margin: 0;
+    padding: 20px;
+    height: 100%;
+    overflow: auto;
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #454c59;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #282c34;
+    }
+  }
+
+  code {
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+`;
+
+export const CodeHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #2a2a2aff;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-bottom: 1px solid #181a1f;
+`;
+
+export const CopyButton = styled.button`
+  background-color: #1c1c1cff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #5a6377;
+  }
+
+  svg {
+    font-size: 14px;
+  }
 `;
 
 export const MainSplitContainer = styled.div`
@@ -113,7 +175,13 @@ export const FileRow = styled.div<{ isSelected: boolean }>`
     right: 0;
     bottom: 0;
     background-color: ${(props) =>
-      props.isSelected ? "#37373d" : "transparent"};
+      props.isSelected ? "#232323FF" : "transparent"};
     z-index: -1;
   }
+`;
+
+export const FileInfoWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
