@@ -87,7 +87,7 @@ export const ContentViewer = styled.div<{ isVisible: boolean }>`
   transform: translateY(${(props) => (props.isVisible ? "0" : "100%")});
   opacity: ${(props) => (props.isVisible ? "1" : "0")};
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-
+  overflow: hidden;
   pre {
     margin: 0;
     padding: 20px;
@@ -95,17 +95,27 @@ export const ContentViewer = styled.div<{ isVisible: boolean }>`
     overflow: auto;
 
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #454c59;
-      border-radius: 4px;
+      background: #606060;
+      border-radius: 6px;
+      border: 2px solid #2a2a2aff;
+
+      &:hover {
+        background: #757575;
+      }
     }
 
     ::-webkit-scrollbar-track {
-      background: #282c34;
+      background: #313131;
+      border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-corner {
+      background: #313131;
     }
   }
 
