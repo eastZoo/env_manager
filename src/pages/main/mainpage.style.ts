@@ -195,3 +195,17 @@ export const FileInfoWrapper = styled.div`
   align-items: center;
   gap: 8px;
 `;
+
+export const Editor = styled.textarea`
+  width: 100%;
+  height: calc(100% - 40px);
+  background: inherit;
+  color: #abb2bf;
+  border: none;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+`;

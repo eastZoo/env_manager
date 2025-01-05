@@ -9,6 +9,8 @@ import {
   FaFileAlt,
   FaTrash,
   FaCopy,
+  FaEdit,
+  FaSave,
 } from "react-icons/fa";
 import { TbChevronRight, TbChevronDown } from "react-icons/tb";
 import CodeHeader from "../../components/organisms/Header";
@@ -57,9 +59,17 @@ const MainPage: React.FC = () => {
 
   const [isContentVisible, setIsContentVisible] = useState(false);
 
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editedContent, setEditedContent] = useState<string>("");
+
   const queryClient = useQueryClient();
 
   const codeRef = useRef<HTMLElement>(null);
+
+  // 현재 폴더 상태를 저장할 state 추가
+  const [folderStates, setFolderStates] = useState<{ [key: number]: boolean }>(
+    {}
+  );
 
   /** ============================= API 영역 ============================= */
   // Fetch all root folders
@@ -74,9 +84,26 @@ const MainPage: React.FC = () => {
         method: "GET",
         url: "/folders",
       });
-      return result;
+      // 데이터를 받아온 후 저장된 폴더 상태 적용
+      return result.map((folder) => ({
+        ...folder,
+        isOpen: folderStates[folder.id] ?? folder.isOpen,
+        subFolders: applyFolderStates(folder.subFolders, folderStates),
+      }));
     },
   });
+
+  // 폴더 상태를 재귀적으로 적용하는 헬퍼 함수
+  const applyFolderStates = (
+    folders: Folder[],
+    states: { [key: number]: boolean }
+  ): Folder[] => {
+    return folders.map((folder) => ({
+      ...folder,
+      isOpen: states[folder.id] ?? folder.isOpen,
+      subFolders: applyFolderStates(folder.subFolders, states),
+    }));
+  };
 
   // Fetch file content by fileId
   const fetchFileContent = async (fileId: number) => {
@@ -119,18 +146,23 @@ const MainPage: React.FC = () => {
     },
   });
 
-  // Create file mutation
+  // 파일 생성 mutation 함수
   const { mutateAsync: createFileMutation } = useMutation({
-    mutationFn: ({ name, folderId }: { name: string; folderId: number }) => {
+    mutationFn: (dataSource: {
+      name: string;
+      folderId: number;
+      fileType: string;
+    }) => {
       return request({
         method: "POST",
         url: "/files",
-        data: { name, folderId },
+        data: dataSource,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["folders"] });
       setIsCreatingFile(null);
+      setNewFileName("");
     },
     onError: (error) => {
       console.error("File creation error: ", error);
@@ -176,18 +208,55 @@ const MainPage: React.FC = () => {
     },
   });
 
+  const { mutateAsync: updateFileMutation } = useMutation({
+    mutationFn: (data: { fileId: number; content: string }) => {
+      return request({
+        method: "PUT",
+        url: `/files/${data.fileId}/content`,
+        data: { content: data.content },
+      });
+    },
+    onSuccess: async (_, variables) => {
+      setIsEditing(false);
+      const updatedContent = await fetchFileContent(variables.fileId);
+      if (updatedContent) {
+        setSelectedFile(updatedContent);
+      }
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      toast.success("파일이 성공적으로 저장되었습니다.", {
+        position: "bottom-center",
+        autoClose: 1500,
+      });
+    },
+    onError: (error) => {
+      console.error("File update error: ", error);
+      toast.error("파일 저장에 실패했습니다.", {
+        position: "bottom-center",
+        autoClose: 1500,
+      });
+    },
+  });
+
   /** ============================= 비즈니스 로직 영역 ============================= */
 
   const handleFileClick = async (file: File) => {
+    // 먼저 이전 파일 내용과 선택을 초기화
+    setSelectedFile(null);
+    setIsContentVisible(false);
+
     if (selectedFile?.id === file.id) {
-      setIsContentVisible(false);
+      // 같은 파일을 다시 클릭한 경우
       setTimeout(() => {
         setSelectedFile(null);
       }, 300);
     } else {
+      // 새로운 파일을 클릭한 경우
       const content = await fetchFileContent(file.id);
-      setSelectedFile(file);
-      setIsContentVisible(true);
+      if (content) {
+        // content가 있을 때만 파일을 보여줌
+        setSelectedFile(file);
+        setIsContentVisible(true);
+      }
     }
   };
 
@@ -211,6 +280,12 @@ const MainPage: React.FC = () => {
     queryClient.setQueryData<Folder[]>(["folders"], (oldData) => {
       if (!oldData) return oldData;
 
+      // 폴더 상태 업데이트
+      setFolderStates((prev) => ({
+        ...prev,
+        [folderId]: !prev[folderId],
+      }));
+
       return oldData?.map((folder) =>
         folder.id === folderId
           ? { ...folder, isOpen: !folder.isOpen }
@@ -222,6 +297,7 @@ const MainPage: React.FC = () => {
     });
   };
 
+  /** 폴더 열기/닫기 토글 함수 */
   const toggleFolderHelper = (
     folders: Folder[],
     folderId: number
@@ -236,6 +312,7 @@ const MainPage: React.FC = () => {
     );
   };
 
+  /** 파일 추가 함수 */
   const handleAddFile = () => {
     if (selectedFolderId !== null) {
       openFolderIfClosed(selectedFolderId);
@@ -252,6 +329,7 @@ const MainPage: React.FC = () => {
     }
   };
 
+  /** 폴더 생성 함수 */
   const createFolder = async (
     folderName: string,
     parentFolderId: number | null
@@ -266,12 +344,19 @@ const MainPage: React.FC = () => {
     });
   };
 
+  /** 파일 생성 함수 */
   const createFile = async (fileName: string, folderId: number) => {
     if (!fileName.trim()) {
       setIsCreatingFile(null);
       return;
     }
-    await createFileMutation({ name: fileName, folderId });
+    const dataSource = {
+      name: fileName,
+      folderId: folderId,
+      fileType: `.${fileName.split(".")[1]}`, // . 를 붙여서 확장자 형식으로 전달
+    };
+    // 파일 생성 요청
+    await createFileMutation(dataSource);
   };
 
   const openFolderIfClosed = (folderId: number) => {
@@ -289,6 +374,7 @@ const MainPage: React.FC = () => {
     });
   };
 
+  /** 폴더 열기/닫기 토글 함수 */
   const openFolderIfClosedHelper = (
     folders: Folder[],
     folderId: number
@@ -303,6 +389,7 @@ const MainPage: React.FC = () => {
     );
   };
 
+  /** 폴더 선택 함수 */
   const selectFolder = (folderId: number) => {
     setSelectedFolderId((prev) => (prev === folderId ? null : folderId));
   };
@@ -430,7 +517,7 @@ const MainPage: React.FC = () => {
               }}
               style={{
                 marginLeft: "auto",
-                fontSize: "18px",
+                fontSize: "14px",
                 color: "#afafaf",
                 cursor: "pointer",
               }}
@@ -655,6 +742,35 @@ const MainPage: React.FC = () => {
               <S.FileInfoWrapper>
                 {getFileIcon(selectedFile?.fileType)}
                 <span style={{ color: "#abb2bf" }}>{selectedFile?.name}</span>
+                {isEditing ? (
+                  <FaSave
+                    onClick={async () => {
+                      await updateFileMutation({
+                        fileId: selectedFile.id,
+                        content: editedContent,
+                      });
+                    }}
+                    style={{
+                      marginLeft: "10px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      color: "#abb2bf",
+                    }}
+                  />
+                ) : (
+                  <FaEdit
+                    onClick={() => {
+                      setIsEditing(true);
+                      setEditedContent(selectedFile.content);
+                    }}
+                    style={{
+                      marginLeft: "10px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      color: "#abb2bf",
+                    }}
+                  />
+                )}
               </S.FileInfoWrapper>
               <S.CopyButton
                 onClick={() => copyToClipboard(selectedFile?.content)}
@@ -663,15 +779,23 @@ const MainPage: React.FC = () => {
                 Copy code
               </S.CopyButton>
             </S.CodeHeader>
-            <pre>
-              <code
-                ref={codeRef}
-                className={`hljs language-${detectLanguage(
-                  selectedFile?.fileType
-                )}`}
-                style={{ background: "inherit" }}
+            {isEditing ? (
+              <S.Editor
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                spellCheck={false}
               />
-            </pre>
+            ) : (
+              <pre>
+                <code
+                  ref={codeRef}
+                  className={`hljs language-${detectLanguage(
+                    selectedFile?.fileType
+                  )}`}
+                  style={{ background: "inherit" }}
+                />
+              </pre>
+            )}
           </S.ContentViewer>
         )}
       </S.MainSplitContainer>
