@@ -21,6 +21,7 @@ import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
+import copy from "clipboard-copy";
 
 export interface File {
   id: number;
@@ -674,16 +675,31 @@ const MainPage: React.FC = () => {
   // 복사 기능을 위한 함수 추가
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await copy(text);
       toast.success("코드가 클립보드에 복사되었습니다.", {
         position: "bottom-center",
         autoClose: 1500,
       });
     } catch (err) {
-      toast.error("복사에 실패했습니다.", {
-        position: "bottom-center",
-        autoClose: 1500,
-      });
+      // fallback: 기본 복사 방식 시도
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        toast.success("코드가 클립보드에 복사되었습니다.", {
+          position: "bottom-center",
+          autoClose: 1500,
+        });
+      } catch (fallbackErr) {
+        toast.error("복사에 실패했습니다.", {
+          position: "bottom-center",
+          autoClose: 1500,
+        });
+      }
     }
   };
 
